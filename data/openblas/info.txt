@@ -1,0 +1,3 @@
+Time: 2023-05-13 10:29:02.019743
+BLAS: /usr/lib/libopenblas.so.0.3
+LAPACK: /usr/lib/liblapack.so.3.11.0

@@ -1,0 +1,3 @@
+Time: 2023-05-13 10:42:00.139271
+BLAS: /opt/intel/oneapi/mkl/2023.0.0/lib/intel64/libmkl_gf_lp64.so.2
+LAPACK: /opt/intel/oneapi/mkl/2023.0.0/lib/intel64/libmkl_gf_lp64.so.2
