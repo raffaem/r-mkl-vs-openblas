@@ -9,13 +9,14 @@ rm.out <- function(x) {
 	q1 <- quantile(x, 0.25)[[1]]
 	q3 <- quantile(x, 0.75)[[1]]
 	iqr <- q3-q1
-	out <- (x < q1-1.5*iqr) | (x > q3+1.5*iqr)
+	alpha <- 1
+	out <- (x <= q1-alpha*iqr) | (x >= q3+alpha*iqr)
 	return(x[!out])
 }
 
 rm.out2 <- function(x) {
 	z <- (x-mean(x))/sd(x)
-	out <- (z >= 2) | (z <= -2)
+	out <- (z >= 3) | (z <= -3)
 	return(x[!out])
 }
 
@@ -25,7 +26,7 @@ mkl.df <- read.csv("./data/mkl/results.csv")
 ob.df <- read.csv("./data/openblas/results.csv")
 
 test_groups <- unique(mkl.df$test_group)
-findf <- data.frame(time=c(),lib=c(),test=c())
+plotdf <- data.frame(time=c(),lib=c(),test=c(),test_group=c())
 meandf <- data.frame(test_group=c(),test=c(),x=c(),y=c(),diff=c(),s=c(),p=c())
 
 for(test_group in test_groups) {
@@ -34,12 +35,6 @@ for(test_group in test_groups) {
 	tests <- unique(mkl.df[mask,"test"])
 	
 	for(test in tests) {
-		
-		if(test=="eigen" | test=="inverse" | test=="escoufier") {
-			next
-		}
-		
-		print(test)
 		
 		mkl <- mkl.df$user[mkl.df$test==test]*(10**3)
 		ob <- ob.df$user[ob.df$test==test]*(10**3)
@@ -58,22 +53,37 @@ for(test_group in test_groups) {
 												p=res$p.value)
 		meandf <- rbind(meandf, tmpdf)
 		
-		mkl <- rm.out2(mkl)
-		ob <- rm.out2(ob)
+		# Plot
+		mkl <- rm.out(mkl)
+		ob <- rm.out(ob)
 		
 		lib <- c(rep("MKL",length(mkl)),rep("OpenBLAS",length(ob)))
 
-		tmpdf <- data.frame(time=c(mkl,ob),lib=lib,test=test)
-		findf <- rbind(findf, tmpdf)
+		tmpdf <- data.frame(time=c(mkl,ob),lib=lib,test=test,test_group=test_group)
+		plotdf <- rbind(plotdf, tmpdf)
 
 	}
 }
 
-p <- ggplot(findf, aes(test, time)) + 
-	geom_boxplot(aes(colour = lib)) +
-	scale_x_discrete(guide = guide_axis(angle = 90))
-p
+plotdf$lib <- factor(plotdf$lib,
+												c("MKL", "OpenBLAS"),
+												c("Intel MKL", "OpenBLAS"))
 
+# Boxplots
+for(test_group in test_groups) {
+	plotdf2 <- plotdf[plotdf$test_group==test_group,]
+	png(paste0("./data/img/2023-05-13-", test_group, ".png"),
+			width=1000,
+			height=1000,
+			res=250)
+	p <- ggplot(plotdf2, aes(test, time)) + 
+		geom_boxplot(aes(colour = lib)) +
+		scale_x_discrete(guide = guide_axis(angle = 90))
+	plot(p)
+	dev.off()
+}
+
+# Table
 meandf$diffp <- round(meandf$diffp, 2)
 meandf$s <- round(meandf$s, 2)
 meandf$p <- round(meandf$p, 2)
@@ -83,7 +93,7 @@ rownames(meandf) <- NULL
 colnames(meandf) <- c(
 	"Test Group",
 	"Test",
-	"Intel MLK",
+	"Intel MKL",
 	"OpenBLAS",
 	"Diff",
 	"Diff (%)",
